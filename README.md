@@ -1,28 +1,31 @@
- <h1>Controllo motore tramite PWM</h1> 
+ <h1>Motor control via PWM</h1>. 
 
- <h2>Requisiti di progetto</h2> 
+ <h2>Project Requirements</h2> 
  
-Programma che genera un segnale PWM per il pilotaggio di in motore a velocità variabile.
-La velocità del motore è proporzionale al duty-cycle del segnale PWM e può essere variata da 0 a
-100% a passi di 1%. La velocità può essere impostata in due modi: 
-1. Localmente, mediante tre selettori esterni a dip switch (uno per ogni cifra decimale); 
-2. Da remoto, mediante comando inviato tramite terminale RS232. Un apposito selettore esterno permette di fissare la priorità tra
-velocità impostata da locale e velocità impostata da remoto.
+Program that generates a PWM signal to drive a variable speed motor.
+The speed of the motor is proportional to the duty-cycle of the PWM signal and can be varied from 0 to
+100% in steps of 1%. The speed can be set in two ways: 
+1. Locally, using three external dip switches (one for each decimal place); 
+2. Remotely, by means of a command sent via RS232 terminal. A special external selector allows you to set the priority between
+speed set locally and speed set remotely.
 
-N.B.: i selettori possono essere sostituiti con semplici fili verso massa o alimentazione.
-Il progetto necessita di scheda Xplained Mini e di oscilloscopio/frequenzimetro per misurare la
-frequenza del segnale PWM.
+N.B.: the selectors can be replaced with simple wires to ground or power supply.
+The project requires Xplained Mini board and oscilloscope/frequency meter to measure the frequency of the
+frequency of the PWM signal.
 
- <h2>Funzionalità del programma</h2> 
+ <h2>Program Functionality</h2> 
  
-Tramite terminale:
-* Se viene scritto il comando "up", ho un incremento del Duty Cycle pari al 1%
-* Se viene scritto il comando "down", ho un decremento del Duty Cycle pari al 1%
+Via terminal:
+* If the command "up" is written, I have an increase of the Duty Cycle equal to 1%.
+* If the command "down" is written, I have a decrease of the Duty Cycle equal to 1%.
 
-Tramite Dip Switch:
-* Ho uno switch per ogni cifra decimale (tre Dip Switch)
+Through Dip Switch:
+* I have a switch for each decimal digit (three Dip Switches).
 
-Devo permettere di selezionare i due metodi, che sono mutualmente esclusivi. Per garantire l'esclusività,
-utilizzo il pulsante sul pin 7 del port B: in questo modo scelgo di abilitare la modifica di duty cycle
-attraverso terminale. Per via software si esclude successivamente, in questo caso, l'inserimento del Duty Cycle
-via selettore esterno.
+I must allow to select the two methods, which are mutually exclusive. To guarantee exclusivity
+I use the button on pin 7 of port B: in this way I choose to enable the duty cycle modification
+through terminal. By software, in this case, the insertion of Duty Cycle is subsequently excluded
+via external selector.
+
+
+Translated with www.DeepL.com/Translator (free version)
