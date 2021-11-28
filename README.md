@@ -1,4 +1,4 @@
- <h1>Motor control via PWM</h1>. 
+ <h1>Motor control via PWM</h1>
 
  <h2>Project Requirements</h2> 
  
@@ -26,6 +26,3 @@ I must allow to select the two methods, which are mutually exclusive. To guarant
 I use the button on pin 7 of port B: in this way I choose to enable the duty cycle modification
 through terminal. By software, in this case, the insertion of Duty Cycle is subsequently excluded
 via external selector.
-
-
-Translated with www.DeepL.com/Translator (free version)
