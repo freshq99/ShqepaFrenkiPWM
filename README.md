@@ -5,8 +5,8 @@
 Programma che genera un segnale PWM per il pilotaggio di in motore a velocità variabile.
 La velocità del motore è proporzionale al duty-cycle del segnale PWM e può essere variata da 0 a
 100% a passi di 1%. La velocità può essere impostata in due modi: 
-1 Localmente, mediante tre selettori esterni a dip switch (uno per ogni cifra decimale); 
-2 Da remoto, mediante comando inviato tramite terminale RS232. Un apposito selettore esterno permette di fissare la priorità tra
+1. Localmente, mediante tre selettori esterni a dip switch (uno per ogni cifra decimale); 
+2. Da remoto, mediante comando inviato tramite terminale RS232. Un apposito selettore esterno permette di fissare la priorità tra
 velocità impostata da locale e velocità impostata da remoto.
 
 N.B.: i selettori possono essere sostituiti con semplici fili verso massa o alimentazione.
