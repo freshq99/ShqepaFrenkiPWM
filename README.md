@@ -11,8 +11,7 @@ velocità impostata da locale e velocità impostata da remoto.
 
 N.B.: i selettori possono essere sostituiti con semplici fili verso massa o alimentazione.
 Il progetto necessita di scheda Xplained Mini e di oscilloscopio/frequenzimetro per misurare la
-frequenza del segnale PWM. Una versione “light”, senza la parte RS232, può essere realizzata
-con il solo simulatore.
+frequenza del segnale PWM.
 
  <h2>Funzionalità del programma</h2> 
  
