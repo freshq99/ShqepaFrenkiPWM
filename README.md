@@ -1,7 +1,3 @@
-# ShqepaFrenkiPWM
-
-# PWM GENERAZIONE DI SEGNALI TRAMITE PWM
-
  <h1>Comando motore mediante PWM </h1> 
 
  <h2>REQUISITI DI PROGETTO</h2> 
