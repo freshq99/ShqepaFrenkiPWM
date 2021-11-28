@@ -1,9 +1,11 @@
 # ShqepaFrenkiPWM
 
-/*************************************************************************************************************
------------------------------------PWM GENERAZIONE DI SEGNALI TRAMITE PWM-------------------------------------
-----------------------------------------Comando motore mediante PWM-------------------------------------------
-++++++++++++++++++++++++++++++++++++++++++++REQUISITI DI PROGETTO+++++++++++++++++++++++++++++++++++++++++++++
+# PWM GENERAZIONE DI SEGNALI TRAMITE PWM
+
+<center> <h1>Comando motore mediante PWM 1</h1> </center>
+
+<center> <h1>REQUISITI DI PROGETTO</h1> </center>
+
 Programma che genera un segnale PWM per il pilotaggio di in motore a velocità variabile.
 La velocità del motore è proporzionale al duty-cycle del segnale PWM e può essere variata da 0 a
 100% a passi di 1%. La velocità può essere impostata in due modi: 1) localmente, mediante tre
@@ -14,6 +16,7 @@ N.B.: i selettori possono essere sostituiti con semplici fili verso massa o alim
 Il progetto necessita di scheda Xplained Mini e di oscilloscopio/frequenzimetro per misurare la
 frequenza del segnale PWM. Una versione “light”, senza la parte RS232, può essere realizzata
 con il solo simulatore.
+
 +++++++++++++++++++++++++++++++++++++++++FUNZIONALITA' DEL PROGRAMMA+++++++++++++++++++++++++++++++++++++++++
 Tramite terminale:
 -Se viene scritto il comando "up", ho un incremento del Duty Cycle pari al 1%
