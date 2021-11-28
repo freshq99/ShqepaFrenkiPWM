@@ -14,6 +14,7 @@ frequenza del segnale PWM. Una versione “light”, senza la parte RS232, può 
 con il solo simulatore.
 
  <h2>Funzionalità del programma</h2> 
+ 
 Tramite terminale:
 - ciao
 - ciaone
