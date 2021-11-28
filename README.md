@@ -1,4 +1,4 @@
- <h1> <center> Comando motore mediante PWM </center> </h1> 
+<p style="text-align: center;">Controllo motore tramite PWM</p>
 
  <h2>Requisiti di progetto</h2> 
  
