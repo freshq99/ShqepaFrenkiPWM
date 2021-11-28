@@ -15,11 +15,11 @@ con il solo simulatore.
 
  <h2>Funzionalità del programma</h2> 
 Tramite terminale:
-- Se viene scritto il comando "up", ho un incremento del Duty Cycle pari al 1%
-- Se viene scritto il comando "down", ho un decremento del Duty Cycle pari al 1%
-- 
+* Se viene scritto il comando "up", ho un incremento del Duty Cycle pari al 1%
+* Se viene scritto il comando "down", ho un decremento del Duty Cycle pari al 1%
+
 Tramite Dip Switch:
-- Ho uno switch per ogni cifra decimale (tre Dip Switch)
+* Ho uno switch per ogni cifra decimale (tre Dip Switch)
 
 Devo permettere di selezionare i due metodi, che sono mutualmente esclusivi. Per garantire l'esclusività,
 utilizzo il pulsante sul pin 7 del port B: in questo modo scelgo di abilitare la modifica di duty cycle
