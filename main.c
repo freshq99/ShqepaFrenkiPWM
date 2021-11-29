@@ -1,12 +1,44 @@
+/*************************************************************************************************************
+-----------------------------------PWM GENERAZIONE DI SEGNALI TRAMITE PWM-------------------------------------
+----------------------------------------Comando motore mediante PWM-------------------------------------------
+
+++++++++++++++++++++++++++++++++++++++++++++REQUISITI DI PROGETTO+++++++++++++++++++++++++++++++++++++++++++++
+Programma che genera un segnale PWM per il pilotaggio di in motore a velocità variabile.
+La velocità del motore è proporzionale al duty-cycle del segnale PWM e può essere variata da 0 a
+100% a passi di 1%. La velocità può essere impostata in due modi: 1) localmente, mediante tre
+selettori esterni a dip switch (uno per ogni cifra decimale); 2) da remoto, mediante comando
+inviato tramite terminale RS232. Un apposito selettore esterno permette di fissare la priorità tra
+velocità impostata da locale e velocità impostata da remoto.
+
+N.B.: i selettori possono essere sostituiti con semplici fili verso massa o alimentazione.
+Il progetto necessita di scheda Xplained Mini e di oscilloscopio/frequenzimetro per misurare la
+frequenza del segnale PWM. Una versione “light”, senza la parte RS232, può essere realizzata
+con il solo simulatore.
+
++++++++++++++++++++++++++++++++++++++++++FUNZIONALITA' DEL PROGRAMMA+++++++++++++++++++++++++++++++++++++++++
+Tramite terminale:
+-Se viene scritto il comando "up", ho un incremento del Duty Cycle pari al 1%
+-Se viene scritto il comando "down", ho un decremento del Duty Cycle pari al 1%
+
+Tramite Dip Switch:
+-Ho uno switch per ogni cifra decimale (tre Dip Switch)
+
+Devo permettere di selezionare i due metodi, che sono mutualmente esclusivi. Per garantire l'esclusività,
+utilizzo il pulsante sul pin 7 del port B: in questo modo scelgo di abilitare la modifica di duty cycle
+attraverso terminale. Per via software si esclude successivamente, in questo caso, l'inserimento del Duty Cycle
+via selettore esterno.
+
+*************************************************************************************************************/
+
 #define F_CPU 16000000UL
 #define BAUD 9600
 #define MAX_STR_LEN 60
-#define F_PWM 245 // frequenza PWM in Hz
+#define F_PWM 310 // frequenza PWM in Hz
 #define PRE 256 // valore del prescale del timer
 #define UserTop ((F_CPU+0.5*F_PWM*PRE)/(1UL*F_PWM*PRE)-1) // valore da inserire in OCR0B per stabilire il TOP del timer T0
 // la formula è UserTop = F_CPU/(F_PWM*PRE)-1, ma per compensare l'effetto
 // dei troncamenti occorre aggiungere 0.5 al risultato della divisione per (F_PWM*PRE)
-#define DInit 250
+#define DInit 5
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -39,7 +71,7 @@ void timer_on(void);
 //Flag di inserimento da terminale. Se '1', il terminale ha precedenza.
 volatile char inserimentoDaTerminale;
 
-volatile char flag_accensione = 0; //Se è a 1, vuol dire che c'è stato lo spegnimento del timer 
+volatile char flag_accensione = 0; //Se è a 1, vuol dire che c'è stato lo spegnimento del timer
 
 //Le seguenti variabili globali vengono utilizzate per capire quale 'bit'
 //del dip switch delle unità viene modificato.
@@ -60,9 +92,12 @@ int main(void){
 	init();
 	USART_init();
 	LedOn();
+	//Iniziamo a far muovere il motore
+	timer_init();
 	
 	char str[MAX_STR_LEN + 1]; // array per la stringa (una cella in più per ospitare il carattere terminatore di stringa)
 	unsigned char valoreDC = DInit; //Valore da inserire nel registro OC0B
+	unsigned char PerDC;
 	
 	unsigned char u;
 	unsigned char ts;
@@ -77,121 +112,126 @@ int main(void){
 	USART_TX_string("-Se clicchi sul pulsante presente sulla scheda Xplained Mini,");
 	USART_TX_string(" devi utilizzare i Dip Switch sulla Breadboard (uno per ogni cifra)");
 	
-	//Iniziamo a far muovere il motore
-	timer_init();
+	
 	
 	while(1){
 		
 		stato_dip_switch();
-		if(flag_accensione == 1){
-			timer_on();
-			valoreDC = OCR0B;
-		}
 		
 		switch (PresentState){
 			
 			case TerminaleAttivo: //L'inserimento da terminale è attivo
-				USART_TX_string("\nScrivi \"up\" per aumentare il Duty Cycle di 1%");
-				USART_TX_string("Scrivi \"down\" per decrementare il Duty Cycle di 1%");
-				USART_RX_string(str, MAX_STR_LEN);
-				
-				if(!inserimentoDaTerminale){
-					if((!strcmp(str, "up")) || (!strcmp(str, "down")))
-					PresentState = ModificaDCTerminale;
-					
-					else
-					USART_TX_string("\n-> Comando non riconosciuto");
-				}
+			USART_TX_string("\nScrivi \"up\" per aumentare il Duty Cycle di 1%");
+			USART_TX_string("Scrivi \"down\" per decrementare il Duty Cycle di 1%");
+			USART_RX_string(str, MAX_STR_LEN);
+			
+			if(!inserimentoDaTerminale){
+				if((!strcmp(str, "up")) || (!strcmp(str, "down")))
+				PresentState = ModificaDCTerminale;
 				
 				else
-				PresentState = SelettoreEsternoAttivo;
-				
-				break;
+				USART_TX_string("\n-> Comando non riconosciuto");
+			}
+			
+			else
+			PresentState = SelettoreEsternoAttivo;
+			
+			break;
 			
 			case SelettoreEsternoAttivo:
-				USART_TX_string("~~~~~~~Istruzioni per l'utilizzo del Selettore Esterno~~~~~~");
-				USART_TX_string("L'inserimento da selettore esterno è ora attivo.");
-				USART_TX_string("Sono presenti tre Dip Switch.");
-				USART_TX_string("Orienta la breadboard in modo da avere");
-				USART_TX_string("il Dip Switch singolo all'estrema SX.");
-				USART_TX_string("In questo modo vedrai, da SX a DX");
-				USART_TX_string("i Dip Switch delle centinaia, decine, unità.");
-				USART_TX_string("\nScrivi nel terminale i seguenti comandi:");
-				USART_TX_string("-Scrivi \"inizio\" prima di modificare il DC.");
-				USART_TX_string("-Scrivi \"fine\" quando hai modificato il DC.");
-				USART_TX_string("Il Duty Cycle va da 0% a 100%, con risoluzione 1%");
-				USART_TX_string("Devi usare i Dip Switch con la codifica BCD per ogni cifra");
-				
-				USART_RX_string(str, MAX_STR_LEN);
-				
-				if(!strcmp(str, "inizio"))
-				PresentState = ModificaDCSelettore;
-				
-				else {
-					USART_TX_string("Devi scrivere \"inizio\" per iniziare la modifica del DC");
-					PresentState = SelettoreEsternoAttivo;
-				}
-				
-				break;
+			USART_TX_string("~~~~~~~Istruzioni per l'utilizzo del Selettore Esterno~~~~~~");
+			USART_TX_string("L'inserimento da selettore esterno è ora attivo.");
+			USART_TX_string("Sono presenti tre Dip Switch.");
+			USART_TX_string("Orienta la breadboard in modo da avere");
+			USART_TX_string("il Dip Switch singolo all'estrema SX.");
+			USART_TX_string("In questo modo vedrai, da SX a DX");
+			USART_TX_string("i Dip Switch delle centinaia, decine, unità.");
+			USART_TX_string("\nScrivi nel terminale i seguenti comandi:");
+			USART_TX_string("-Scrivi \"inizio\" prima di modificare il DC.");
+			USART_TX_string("-Scrivi \"fine\" quando hai modificato il DC.");
+			USART_TX_string("Il Duty Cycle va da 0% a 100%, con risoluzione 1%");
+			USART_TX_string("Devi usare i Dip Switch con la codifica BCD per ogni cifra");
+			
+			USART_RX_string(str, MAX_STR_LEN);
+			
+			if(!strcmp(str, "inizio"))
+			PresentState = ModificaDCSelettore;
+			
+			else {
+				USART_TX_string("Devi scrivere \"inizio\" per iniziare la modifica del DC");
+				PresentState = SelettoreEsternoAttivo;
+			}
+			
+			break;
 			
 			case ModificaDCTerminale:
-				if(!strcmp(str, "up")){
-					
-					if((valoreDC+3) > UserTop){
-						USART_TX_string("\n-> Duty Cycle massimo raggiunto");
-					}
+			if(!strcmp(str, "up")){
 				
-					else{
-						valoreDC = valoreDC + 3;
-						OCR0B = valoreDC;
-						USART_TX_string("\n-> Duty Cycle aumentato con successo !");
-						sprintf(str, "-> Duty Cycle impostato a %d", ((100*valoreDC/255)));
-					}
+				if(flag_accensione == 1){
+					timer_on();
+				
 				}
-			
-				//Nella seguente condizione faccio a meno di fare un compare con str
-				//perchè in questo stato ci si entra solo nella condizione in cui
-				//str sia o "up" o "down"
+				
+				if((valoreDC+2) > UserTop){
+					USART_TX_string("\n-> Duty Cycle massimo raggiunto");
+				}
+				
 				else{
-					if(valoreDC < 6){
-						flag_accensione = 1;
-						timer_off();
-					}
-					
-					else{
-						valoreDC = valoreDC - 3;
-						OCR0B = valoreDC;
-						USART_TX_string("\n-> Duty Cycle decrementato con successo !");
-						sprintf(str, "-> Duty Cycle impostato a %d", ((100*valoreDC/255)));
-					}	
+					valoreDC = valoreDC + 2;
+					OCR0B = valoreDC;
+					PerDC = ceil(valoreDC*100/UserTop);
+					sprintf(str, "\n-> Duty Cycle aumentato a %d %", PerDC);
+					USART_TX_string(str);
 				}
-				PresentState = TerminaleAttivo;
+			}
 			
-				break;
+			//Nella seguente condizione faccio a meno di fare un compare con str
+			//perchè in questo stato ci si entra solo nella condizione in cui
+			//str sia o "up" o "down"
+			else{
+				if(valoreDC < 3){
+					flag_accensione = 1;
+					USART_TX_string("\n-> Motore Spento !");
+					timer_off();
+				}
+				
+				else{
+					valoreDC = valoreDC - 2;
+					OCR0B = valoreDC;
+					PerDC = ceil(valoreDC*100/UserTop);
+					sprintf(str, "\n-> Duty Cycle decrementato a %d %", PerDC);
+					USART_TX_string(str);
+				}
+			}
+			PresentState = TerminaleAttivo;
+			
+			break;
 			
 			case ModificaDCSelettore:
-				USART_TX_string("\nScrivi \"fine\" quando hai finito la modifica del DC");
+			USART_TX_string("\nScrivi \"fine\" quando hai finito la modifica del DC");
+			
+			USART_RX_string(str, MAX_STR_LEN);
+			
+			if(!strcmp(str, "fine")){
+				u = BinToDec(units);
+				ts = BinToDec(tens);
+				hs = BinToDec(hundreds);
 				
-				USART_RX_string(str, MAX_STR_LEN);
+				valoreDC = SwitchConcat(0, 9, 8);
 				
-				if(!strcmp(str, "fine")){
-					u = BinToDec(units);
-					ts = BinToDec(tens);
-					hs = BinToDec(hundreds);
-					
-					valoreDC = SwitchConcat(0, 0, 8);
-					
-					OCR0B = valoreDC;
-					
-					sprintf(str, "-> Duty Cycle impostato a %d", ((100*valoreDC/255)));
-					PresentState = SelettoreEsternoAttivo;
-				}
+				OCR0B = valoreDC;
+				PerDC = ceil(valoreDC*100/UserTop);
+				sprintf(str, "\n-> Duty Cycle impostato a %d %", PerDC);
+				USART_TX_string(str);
 				
-				else{
-					USART_TX_string("Il Duty Cycle non è stato modificato con successo");
-					PresentState = SelettoreEsternoAttivo;
-				}
-				break;
+				PresentState = SelettoreEsternoAttivo;
+			}
+			
+			else{
+				USART_TX_string("Il Duty Cycle non è stato modificato con successo");
+				PresentState = SelettoreEsternoAttivo;
+			}
+			break;
 		}
 	}
 }//Fine main
@@ -220,10 +260,10 @@ void init(void){
 	//8, 9, 10, 11
 	//18, 19, 20, 21, 22
 	PCMSK1 =  15<<PCINT8;
-	PCMSK2 = 21<<PCINT18;
+	PCMSK2 = 55<<PCINT18;
 	
 	//PORTCD E PORTC
-	PORTD = ~( 21<<PORTD2 );
+	PORTD = ~( 55<<PORTD2 );
 	PORTC = ~( 15<<PORTC0 );
 	
 	inserimentoDaTerminale = 0;
@@ -244,24 +284,24 @@ void timer_init(void){
 }
 
 void timer_off(void){
-	 TCCR0B = 0x00; // spegnimento timer
-	 
-	 // reset Timer T1; l'operazione deve essere "atomica"!
-	 // essendo eseguita all'interno di una ISR, gli interrupt sono già disabilitati
-	 TCNT1H = 0x00; // reset del counter T1 (parte alta)
-	 TCNT1L = 0x00; // reset del counter T1 (parte bassa)
+	TCCR0B = 0x00; // spegnimento timer
+	
+	// reset Timer T1; l'operazione deve essere "atomica"!
+	// essendo eseguita all'interno di una ISR, gli interrupt sono già disabilitati
+	TCNT1H = 0x00; // reset del counter T1 (parte alta)
+	TCNT1L = 0x00; // reset del counter T1 (parte bassa)
 
-	 // azzeramento flag di un eventuale output compare appena occorso (l'azzeramento è ottenuto scrivendo '1' nel flag)
-	 TIFR1 = (1<<OCF1A); // equivale a TCCR1B = 0b00000010
+	// azzeramento flag di un eventuale output compare appena occorso (l'azzeramento è ottenuto scrivendo '1' nel flag)
+	TIFR1 = (1<<OCF1A); // equivale a TCCR1B = 0b00000010
 }
 
 void timer_on(void){
-		// Impostazione timer T0 in modalità Fast PWM su OCOA (PD6) con TOP=UserTop e prescaler 256
-		OCR0A = (char) UserTop;
-		OCR0B = 6;
-		TCCR0A = ((1<<COM0B1)|(1<<WGM01)|(1<<WGM00)); // equivale a TCCR0A = 0b00100011;
-		TCCR0B = ((1<<WGM02)|(1<<CS02)|(1<<CS00)); // equivale a TCCR0B = 0b00001101;
-		flag_accensione = 0;
+	// Impostazione timer T0 in modalità Fast PWM su OCOA (PD6) con TOP=UserTop e prescaler 256
+	OCR0A = (char) UserTop;
+	OCR0B = 0;
+	TCCR0A = ((1<<COM0B1)|(1<<WGM01)|(1<<WGM00)); // equivale a TCCR0A = 0b00100011;
+	TCCR0B = ((1<<WGM02)|(1<<CS02)|(1<<CS00)); // equivale a TCCR0B = 0b00001101;
+	flag_accensione = 0;
 }
 //Devo inizializzare la periferica USART.
 //Scelgo per il frame il formato 8N1.
@@ -454,3 +494,5 @@ ISR(PCINT2_vect){
 
 	hundreds[0] = !((PIND & (1<<PIND7)) == 0);
 }
+
+
