@@ -33,7 +33,7 @@ via selettore esterno.
 #define F_CPU 16000000UL
 #define BAUD 9600
 #define MAX_STR_LEN 60
-#define F_PWM 310 // frequenza PWM in Hz
+#define F_PWM 313 // frequenza PWM in Hz
 #define PRE 256 // valore del prescale del timer
 #define UserTop ((F_CPU+0.5*F_PWM*PRE)/(1UL*F_PWM*PRE)-1) // valore da inserire in OCR0B per stabilire il TOP del timer T0
 // la formula è UserTop = F_CPU/(F_PWM*PRE)-1, ma per compensare l'effetto
@@ -280,7 +280,7 @@ void timer_init(void){
 	OCR0A = (char) UserTop;
 	OCR0B = duty;
 	TCCR0A = ((1<<COM0B1)|(1<<WGM01)|(1<<WGM00)); // equivale a TCCR0A = 0b00100011;
-	TCCR0B = ((1<<WGM02)|(1<<CS02)|(1<<CS00)); // equivale a TCCR0B = 0b00001101;
+	TCCR0B = ((1<<WGM02)|(1<<CS02)); // equivale a TCCR0B = 0b00001101;
 }
 
 void timer_off(void){
@@ -300,7 +300,7 @@ void timer_on(void){
 	OCR0A = (char) UserTop;
 	OCR0B = 0;
 	TCCR0A = ((1<<COM0B1)|(1<<WGM01)|(1<<WGM00)); // equivale a TCCR0A = 0b00100011;
-	TCCR0B = ((1<<WGM02)|(1<<CS02)|(1<<CS00)); // equivale a TCCR0B = 0b00001101;
+	TCCR0B = ((1<<WGM02)|(1<<CS02)); // equivale a TCCR0B = 0b00001101;
 	flag_accensione = 0;
 }
 //Devo inizializzare la periferica USART.
@@ -494,5 +494,4 @@ ISR(PCINT2_vect){
 
 	hundreds[0] = !((PIND & (1<<PIND7)) == 0);
 }
-
 
