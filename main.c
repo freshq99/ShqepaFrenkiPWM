@@ -38,7 +38,7 @@ via selettore esterno.
 #define UserTop ((F_CPU+0.5*F_PWM*PRE)/(1UL*F_PWM*PRE)-1) // valore da inserire in OCR0B per stabilire il TOP del timer T0
 // la formula è UserTop = F_CPU/(F_PWM*PRE)-1, ma per compensare l'effetto
 // dei troncamenti occorre aggiungere 0.5 al risultato della divisione per (F_PWM*PRE)
-#define DInit 5
+#define DInit 40
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -169,7 +169,7 @@ int main(void){
 				
 				if(flag_accensione == 1){
 					timer_on();
-				
+					
 				}
 				
 				if((valoreDC+2) > UserTop){
@@ -250,7 +250,7 @@ void init(void){
 	PORTB &= ~(1<<PORTB5);
 	
 	//Rimozione maschera all'interrupt sul pin 7
-	PCMSK0 = (1<<PCINT7);
+	PCMSK0 = (129<<PCINT7);
 
 	//Abilito gli interrupt Pin Change 0, 1 e 2
 	PCICR = (7<<PCIE0);
@@ -258,12 +258,12 @@ void init(void){
 	
 	//Rimuovo le maschere agli interrupt sui pin
 	//8, 9, 10, 11
-	//18, 19, 20, 21, 22
+	//18, 19, 20, 22, 23
 	PCMSK1 =  15<<PCINT8;
-	PCMSK2 = 55<<PCINT18;
+	PCMSK2 = 39<<PCINT18;
 	
 	//PORTCD E PORTC
-	PORTD = ~( 55<<PORTD2 );
+	PORTD = ~( 39<<PORTD2 );
 	PORTC = ~( 15<<PORTC0 );
 	
 	inserimentoDaTerminale = 0;
@@ -446,9 +446,9 @@ void stato_dip_switch(){
 	tens[3] = !((PIND & (1<<PIND2)) == 0);
 	tens[2] = !((PIND & (1<<PIND3)) == 0);
 	tens[1] = !((PIND & (1<<PIND4)) == 0);
-	tens[0] = !((PIND & (1<<PIND6)) == 0);
+	tens[0] = !((PIND & (1<<PIND7)) == 0);
 
-	hundreds[0] = !((PIND & (1<<PIND7)) == 0);
+	hundreds[0] = !((PINB & (1<<PINB2)) == 0);
 	
 }
 
@@ -490,8 +490,7 @@ ISR(PCINT2_vect){
 	tens[3] = !((PIND & (1<<PIND2)) == 0);
 	tens[2] = !((PIND & (1<<PIND3)) == 0);
 	tens[1] = !((PIND & (1<<PIND4)) == 0);
-	tens[0] = !((PIND & (1<<PIND6)) == 0);
+	tens[0] = !((PIND & (1<<PIND7)) == 0);
 
-	hundreds[0] = !((PIND & (1<<PIND7)) == 0);
+	hundreds[0] = !((PINB & (1<<PINB2)) == 0);
 }
-
