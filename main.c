@@ -112,11 +112,11 @@ int main(void){
 	USART_TX_string("-Se clicchi sul pulsante presente sulla scheda Xplained Mini,");
 	USART_TX_string(" devi utilizzare i Dip Switch sulla Breadboard (uno per ogni cifra)");
 	
-	
+	stato_dip_switch();
 	
 	while(1){
 		
-		stato_dip_switch();
+	
 		
 		switch (PresentState){
 			
