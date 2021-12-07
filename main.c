@@ -93,7 +93,6 @@ int main(void){
 	
 	char str[MAX_STR_LEN + 1]; // array per la stringa (una cella in più per ospitare il carattere terminatore di stringa)
 	//unsigned char valoreDC = DInit; //Valore da inserire nel registro OC0B
-	unsigned char PerDC;
 	
 	unsigned char u;
 	unsigned char ts;
@@ -161,8 +160,7 @@ int main(void){
 					else{
 						valoreDC++;
 						OCR0B = ceil(valoreDC*top/100);
-						PerDC = valoreDC;
-						sprintf(str, "\n-> Duty Cycle aumentato a %d %%", PerDC);
+						sprintf(str, "\n-> Duty Cycle aumentato a %d %%", valoreDC);
 						USART_TX_string(str);
 					}
 				}
@@ -180,8 +178,7 @@ int main(void){
 					else{
 						valoreDC--;
 						OCR0B = ceil(valoreDC*top/100);
-						PerDC = valoreDC;
-						sprintf(str, "\n-> Duty Cycle decrementato a %d %%", PerDC);
+						sprintf(str, "\n-> Duty Cycle decrementato a %d %%", valoreDC);
 						USART_TX_string(str);
 					}
 				}
@@ -206,8 +203,7 @@ int main(void){
 						
 					else{
 						OCR0B = ceil(valoreDC*top/100);
-						PerDC = valoreDC;
-						sprintf(str, "\n-> Duty Cycle impostato a %d %%", PerDC);
+						sprintf(str, "\n-> Duty Cycle impostato a %d %%", valoreDC);
 						USART_TX_string(str);
 					}
 						
