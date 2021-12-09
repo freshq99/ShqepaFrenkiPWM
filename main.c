@@ -54,6 +54,7 @@ void LedOff(void);
 //Funzioni di utilità che permettono la conversione da bcd a decimale
 char BinToDec(volatile char[], char);
 char SwitchConcat(char, char, char);
+char potenza(char, char);
 
 //Funzione di controllo dello stato degli input esterni
 void stato_dip_switch(void);
@@ -309,6 +310,7 @@ void timer_on(void){
 	flag_accensione = 0; //Faccio il reset del flag che permette di sapere se c'è stato uno spegnimento.
 	
 }
+
 //Devo inizializzare la periferica USART.
 //Scelgo per il frame il formato 8N1.
 void USART_init(void){
@@ -413,6 +415,7 @@ void LedOff(void){
 }
 
 //Funzione che permette di evitare alcuni bug al primo avvio, prima dell'inizializzazione degli interrupt, nel caso i dip switch non si vogliano cambiare.
+//Evita bug al primo avvio.
 void stato_dip_switch(){
 	
 	units[3] = !((PINC & (1<<PINC0)) == 0);
@@ -426,11 +429,11 @@ void stato_dip_switch(){
 	tens[1] = !((PIND & (1<<PIND4)) == 0);
 	tens[0] = !((PIND & (1<<PIND7)) == 0);
 
-	hundreds[0] = !((PINB & (1<<PINB2)) == 0);
+	hundreds[0] = !((PINB & (1<<PINC5)) == 0);
 
 }
 
-//Messaggio di benvenuto
+//Messaggio di benvenuto.
 void benvenuto(){
 	
 	USART_TX_string("Comando motore mediante PWM - Frenki Shqepa");
@@ -443,7 +446,7 @@ void benvenuto(){
 	
 }
 
-//Istruzioni per il selettore esterno
+//Istruzioni per il selettore esterno.
 void istruzioniSelettoreEsterno(){
 	
 	USART_TX_string("~~~~~~~Istruzioni per l'utilizzo del Selettore Esterno~~~~~~");
@@ -459,7 +462,7 @@ void istruzioniSelettoreEsterno(){
 	USART_TX_string("Devi usare i Dip Switch con la codifica BCD per ogni cifra");
 }
 
-//Istruzioni per l'inserimento da terminale
+//Istruzioni per l'inserimento da terminale.
 void istruzioniTerminale(){
 	
 	USART_TX_string("\nScrivi \"up\" per aumentare il Duty Cycle di 1%");
@@ -475,7 +478,7 @@ char BinToDec(volatile char cifreBin[], char dimensione){
 	char dec = 0;
 
 	for(int i=0; i<dimensione; i++){
-		dec = dec + (cifreBin[dimensione-1-i] * pow(2, i));
+		dec = dec + (cifreBin[dimensione-1-i] * potenza(2, i));
 	}
 	
 	//Questa è il numero corrispondente al numero inserito con il Dip Switch
@@ -486,14 +489,28 @@ char BinToDec(volatile char cifreBin[], char dimensione){
 //La seguente funzione concatena le unità con le decine e le centinaia.
 //Essendo BCD la codifica utilizzata, posso essere sicuro che l'utente debba mettere un valore tra 0 e 9 per ogni cifra
 //del Numero decimale da inserire. Ottengo il numero decimale:
-//moltiplicando per 100 la cifra delle centinaia
-//moltiplicando per 10 la cifra delle decine
-//moltiplicando per 1 la cifra delle unità
+//moltiplicando per 100 la cifra delle centinaia;
+//moltiplicando per 10 la cifra delle decine;
+//moltiplicando per 1 la cifra delle unità.
 char SwitchConcat(char centinaia, char decine, char units){
 	
 	char num = 100*centinaia + 10*decine + 1*units;
 	
 	return num;
+	
+}
+
+//Funzione per il calcolo della potenza di un numero.
+//Vengono usati i char, visto che le variabili non superano il valore 255.
+//Per questo motivo la funzione potenza, in modo che restituisca un tipo char.
+char potenza(char base, char esponente){
+	
+	char pot = 1;
+	
+	for (int i = 0; i < esponente; i++)
+		pot = pot * base;
+		
+		return pot; 
 	
 }
 
@@ -518,10 +535,11 @@ ISR(PCINT0_vect){
 		inserimentoDaTerminale = !inserimentoDaTerminale;
 	}
 	
-	hundreds[0] = !((PINB & (1<<PINB2)) == 0);
+	hundreds[0] = !((PINB & (1<<PINC5)) == 0);
 	
 }
 
+//Le seguenti ISR servono per aggiornare i vettori che contengono le cifre binarie provenienti dai dip switch.
 ISR(PCINT1_vect){
 	
 	units[3] = !((PINC & (1<<PINC0)) == 0);
