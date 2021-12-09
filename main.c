@@ -28,7 +28,7 @@ via selettore esterno.
 #define BAUD 9600 //Baud Rate selezionato per la trasmissione USART
 #define MAX_STR_LEN 60 //Lunghezza massima in termini di caratteri di ogni stringa ricevuta e trasmessa
 #define UserTop 255 //Utilizzo il timer 0 e voglio sfruttare tutti i possibili valori
-#define DInit 1 //Valore iniziale di Duty Cycle al primo avvio del programma
+#define DInit 4 //Valore iniziale di Duty Cycle al primo avvio del programma
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -120,10 +120,10 @@ int main(void){
 				if(!inserimentoDaTerminale){ //Se è attiva la modalità di inserimento da terminale, procedo.
 					//Se il comando inserito è valido, si passa allo stato in cui avviene la modifica del duty cycle
 					if((!strcmp(str, "up")) || (!strcmp(str, "down")))
-					PresentState = ModificaDCTerminale;
+						PresentState = ModificaDCTerminale;
 				
 					else //Altrimenti non viene riconosciuto il comando e bisogna inserirne uno valido
-					USART_TX_string("\n-> Comando non riconosciuto");
+						USART_TX_string("\n-> Comando non riconosciuto");
 				}
 			
 				else
@@ -180,9 +180,9 @@ int main(void){
 				//str sia o "up" o "down"
 				else{
 					if(valoreDC <= 1){//Spengo il motore
+						timer_off();
 						flag_accensione = 1;
 						USART_TX_string("\n-> Motore Spento !");
-						timer_off();
 					}
 				
 					else{
@@ -216,10 +216,26 @@ int main(void){
 					if(valoreDC > 100 || ts > 9 || u > 9)
 						USART_TX_string("\n-> Numero inserito non ammesso.");
 					
-					else{ //Mappo il valore con la funzione "ceil" in un valore tra 0 e 255, salvandolo poi in OCR0B.
-						OCR0B = ceil(valoreDC*top/100);
-						sprintf(str, "\n-> Duty Cycle impostato a %d %%", valoreDC);
-						USART_TX_string(str);
+					else if(valoreDC == 0){
+						timer_off();
+						flag_accensione = 1;
+						USART_TX_string("-> Motore spento!");
+					}
+					
+					else{//Sto modificando il duty cycle in un valore maggiore di zero accettabile
+						if(flag_accensione == 1){//Se cambio il duty cycle dopo che era stato impostato a zero, riaccendo il timer.
+							timer_on();
+							valoreDC = SwitchConcat(hs, ts, u);//Concateno le tre cifre per formare il numero decimale che costituisce il duty cycle percentuale nuovo.
+							OCR0B = ceil(valoreDC*top/100);//Mappo il valore con la funzione "ceil" in un valore tra 0 e 255, salvandolo poi in OCR0B.
+							sprintf(str, "\n-> Duty Cycle impostato a %d %%", valoreDC);
+							USART_TX_string(str);
+						}
+						
+						else{	
+							OCR0B = ceil(valoreDC*top/100);//Mappo il valore con la funzione "ceil" in un valore tra 0 e 255, salvandolo poi in OCR0B.
+							sprintf(str, "\n-> Duty Cycle impostato a %d %%", valoreDC);
+							USART_TX_string(str);
+						}	
 					}
 					
 					PresentState = SelettoreEsternoAttivo;
@@ -258,11 +274,12 @@ void init(void){
 	//PCINT8, PCINT9, PCINT10, PCINT11,PCINT13
 	//PCINT18, PCINT19, PCINT20, PCINT23
 	//PCINT7
-	PCMSK0 = (1<<PCINT7);
-	PCMSK1 = (1<<PCINT8)|(1<<PCINT9)|(1<<PCINT10)|(1<<PCINT11)|(1<<PCINT13);
+	PCMSK0 = (1<<PCINT7)|(1<<PCINT1);
+	PCMSK1 = (1<<PCINT8)|(1<<PCINT9)|(1<<PCINT10)|(1<<PCINT11);
 	PCMSK2 = (1<<PCINT18)|(1<<PCINT19)|(1<<PCINT20)|(1<<PCINT23);
 	
 	//PORTCD E PORTC
+	PORTB = ~( (1<<PORTB2) ); 
 	PORTD = ~( (1<<PCINT18)|(1<<PCINT19)|(1<<PCINT20)|(1<<PCINT23) );
 	PORTC = ~( (1<<PCINT8)|(1<<PCINT9)|(1<<PCINT10)|(1<<PCINT11)|(1<<PCINT13) );
 	
@@ -293,8 +310,10 @@ void timer_off(void){
 	
 	// reset Timer T1; l'operazione deve essere "atomica"!
 	// essendo eseguita all'interno di una ISR, gli interrupt sono già disabilitati
-	TCNT1H = 0x00; // reset del counter T1 (parte alta)
-	TCNT1L = 0x00; // reset del counter T1 (parte bassa)
+	TCNT0 = 0x00; // reset del counter T0
+	
+	// azzeramento flag di un eventuale output compare appena occorso (l'azzeramento è ottenuto scrivendo '1' nel flag)
+	TIFR0 = (1<<OCF0A);
 
 }
 
@@ -303,8 +322,8 @@ void timer_on(void){
 	
 	// Impostazione timer T0 in modalità Fast PWM su OCOA (PD6) con TOP=UserTop e prescaler 256
 	OCR0A = (char) UserTop;
-	valoreDC = 1; //Inserisco manualmente il valore percentuale 1%
-	OCR0B = ceil(valoreDC*top/100);;
+	//valoreDC = 1; //Inserisco manualmente il valore percentuale 1%
+	OCR0B = ceil(1*top/100);;
 	TCCR0A = ((1<<COM0B1)|(1<<WGM01)|(1<<WGM00)); //Effettuo di nuovo le operazioni di configurazione del timer
 	TCCR0B = ((1<<WGM02)|(1<<CS02)); 
 	flag_accensione = 0; //Faccio il reset del flag che permette di sapere se c'è stato uno spegnimento.
@@ -429,7 +448,7 @@ void stato_dip_switch(){
 	tens[1] = !((PIND & (1<<PIND4)) == 0);
 	tens[0] = !((PIND & (1<<PIND7)) == 0);
 
-	hundreds[0] = !((PINB & (1<<PINC5)) == 0);
+	hundreds[0] = !((PINB & (1<<PINB2)) == 0);
 
 }
 
@@ -449,7 +468,7 @@ void benvenuto(){
 //Istruzioni per il selettore esterno.
 void istruzioniSelettoreEsterno(){
 	
-	USART_TX_string("~~~~~~~Istruzioni per l'utilizzo del Selettore Esterno~~~~~~");
+	USART_TX_string("\n~~~~~~~Istruzioni per l'utilizzo del Selettore Esterno~~~~~~");
 	USART_TX_string("L'inserimento da selettore esterno è ora attivo.");
 	USART_TX_string("Orienta la breadboard in modo da avere");
 	USART_TX_string("il Dip Switch singolo all'estrema SX.");
@@ -547,7 +566,7 @@ ISR(PCINT1_vect){
 	units[1] = !((PINC & (1<<PINC2)) == 0);
 	units[0] = !((PINC & (1<<PINC3)) == 0);
 
-	hundreds[0] = !((PINC & (1<<PINC5)) == 0);
+	hundreds[0] = !((PINC & (1<<PINB2)) == 0);
 	
 }
 
