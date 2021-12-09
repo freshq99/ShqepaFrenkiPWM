@@ -28,7 +28,7 @@ via selettore esterno.
 #define BAUD 9600
 #define MAX_STR_LEN 60
 #define UserTop 255
-#define DInit 50 //Percento
+#define DInit 1 //Percento
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -108,112 +108,116 @@ int main(void){
 		switch (PresentState){
 			
 			case TerminaleAttivo: //L'inserimento da terminale è attivo
-				istruzioniTerminale();
-				USART_RX_string(str, MAX_STR_LEN);
+			istruzioniTerminale();
+			USART_RX_string(str, MAX_STR_LEN);
 			
-				if(!inserimentoDaTerminale){
-					if((!strcmp(str, "up")) || (!strcmp(str, "down")))
-						PresentState = ModificaDCTerminale;
-					
-					else
-						USART_TX_string("\n-> Comando non riconosciuto");
-				}
+			if(!inserimentoDaTerminale){
+				if((!strcmp(str, "up")) || (!strcmp(str, "down")))
+				PresentState = ModificaDCTerminale;
 				
 				else
-					PresentState = SelettoreEsternoAttivo;
-				
-				break;
+				USART_TX_string("\n-> Comando non riconosciuto");
+			}
+			
+			else
+			PresentState = SelettoreEsternoAttivo;
+			
+			break;
 			
 			case SelettoreEsternoAttivo:
-				if(inserimentoDaTerminale){
-					istruzioniSelettoreEsterno();
-					
-					USART_RX_string(str, MAX_STR_LEN);
-					
-					if(!strcmp(str, "inizio"))
-						PresentState = ModificaDCSelettore;
-					
-					else {
-						USART_TX_string("Devi scrivere \"inizio\" per iniziare la modifica del DC");
-						PresentState = SelettoreEsternoAttivo;
-					}
-				}
-				
-				else
-					PresentState = TerminaleAttivo;
-				
-				break;
-			
-			case ModificaDCTerminale:
-				if(!strcmp(str, "up")){
-				
-					if(flag_accensione == 1)
-						timer_on();
-					
-					else if((valoreDC+1) > 100)
-						USART_TX_string("\n-> Duty Cycle massimo raggiunto");
-					
-					else{
-						valoreDC++;
-						OCR0B = ceil(valoreDC*top/100);
-						sprintf(str, "\n-> Duty Cycle aumentato a %d %%", valoreDC);
-						USART_TX_string(str);
-					}
-				}
-			
-				//Nella seguente condizione faccio a meno di fare un compare con str
-				//perchè in questo stato ci si entra solo nella condizione in cui
-				//str sia o "up" o "down"
-				else{
-					if(valoreDC <= 1){
-						flag_accensione = 1;
-						USART_TX_string("\n-> Motore Spento !");
-						timer_off();
-					}
-				
-					else{
-						valoreDC--;
-						OCR0B = ceil(valoreDC*top/100);
-						sprintf(str, "\n-> Duty Cycle decrementato a %d %%", valoreDC);
-						USART_TX_string(str);
-					}
-				}
-				PresentState = TerminaleAttivo;
-			
-				break;
-			
-			case ModificaDCSelettore:
-				USART_TX_string("\nScrivi \"fine\" quando hai finito la modifica del DC");
+			if(inserimentoDaTerminale){
+				istruzioniSelettoreEsterno();
 				
 				USART_RX_string(str, MAX_STR_LEN);
 				
-				if(!strcmp(str, "fine")){
-					stato_dip_switch();
-					u = BinToDec(units, 4);
-					ts = BinToDec(tens, 4);
-					hs = BinToDec(hundreds, 1);
-					
-					valoreDC = SwitchConcat(hs, ts, u);
-					
-					if(valoreDC > 100 || ts > 9 || u > 9)
-						USART_TX_string("\n-> Numero inserito non ammesso.");
-						
-					else{
-						OCR0B = ceil(valoreDC*top/100);
-						sprintf(str, "\n-> Duty Cycle impostato a %d %%", valoreDC);
-						USART_TX_string(str);
-					}
-						
+				if(!strcmp(str, "inizio"))
+					PresentState = ModificaDCSelettore;
+				
+				else {
+					USART_TX_string("Devi scrivere \"inizio\" per iniziare la modifica del DC");
 					PresentState = SelettoreEsternoAttivo;
+				}
+			}
+			
+			else
+				PresentState = TerminaleAttivo;
+			
+			break;
+			
+			case ModificaDCTerminale:
+			if(!strcmp(str, "up")){
+				
+				if(flag_accensione == 1){
+					timer_on();
+					sprintf(str, "\n-> Duty Cycle aumentato a %d %%", valoreDC);
+					USART_TX_string(str);
+				}
+				
+				
+				else if((valoreDC+1) > 100)
+					USART_TX_string("\n-> Duty Cycle massimo raggiunto");
+				
+				else{
+					valoreDC++;
+					OCR0B = ceil(valoreDC*top/100);
+					sprintf(str, "\n-> Duty Cycle aumentato a %d %%", valoreDC);
+					USART_TX_string(str);
+				}
+			}
+			
+			//Nella seguente condizione faccio a meno di fare un compare con str
+			//perchè in questo stato ci si entra solo nella condizione in cui
+			//str sia o "up" o "down"
+			else{
+				if(valoreDC <= 1){
+					flag_accensione = 1;
+					USART_TX_string("\n-> Motore Spento !");
+					timer_off();
 				}
 				
 				else{
-					USART_TX_string("Il Duty Cycle non è stato modificato con successo");
-					PresentState = SelettoreEsternoAttivo;
+					valoreDC--;
+					OCR0B = ceil(valoreDC*top/100);
+					sprintf(str, "\n-> Duty Cycle decrementato a %d %%", valoreDC);
+					USART_TX_string(str);
+				}
+			}
+			PresentState = TerminaleAttivo;
+			
+			break;
+			
+			case ModificaDCSelettore:
+			USART_TX_string("\nScrivi \"fine\" quando hai finito la modifica del DC");
+			
+			USART_RX_string(str, MAX_STR_LEN);
+			
+			if(!strcmp(str, "fine")){
+				stato_dip_switch();
+				u = BinToDec(units, 4);
+				ts = BinToDec(tens, 4);
+				hs = BinToDec(hundreds, 1);
+				
+				valoreDC = SwitchConcat(hs, ts, u);
+				
+				if(valoreDC > 100 || ts > 9 || u > 9)
+					USART_TX_string("\n-> Numero inserito non ammesso.");
+				
+				else{
+					OCR0B = ceil(valoreDC*top/100);
+					sprintf(str, "\n-> Duty Cycle impostato a %d %%", valoreDC);
+					USART_TX_string(str);
 				}
 				
-				break;
-				
+				PresentState = SelettoreEsternoAttivo;
+			}
+			
+			else{
+				USART_TX_string("Il Duty Cycle non è stato modificato con successo");
+				PresentState = SelettoreEsternoAttivo;
+			}
+			
+			break;
+			
 		}
 	}
 }//Fine main
@@ -283,7 +287,8 @@ void timer_on(void){
 	
 	// Impostazione timer T0 in modalità Fast PWM su OCOA (PD6) con TOP=UserTop e prescaler 256
 	OCR0A = (char) UserTop;
-	OCR0B = 0;
+	valoreDC = 1;
+	OCR0B = ceil(valoreDC*top/100);;
 	TCCR0A = ((1<<COM0B1)|(1<<WGM01)|(1<<WGM00)); // equivale a TCCR0A = 0b00100011;
 	TCCR0B = ((1<<WGM02)|(1<<CS02)); // equivale a TCCR0B = 0b00001101;
 	flag_accensione = 0;
@@ -442,16 +447,6 @@ void istruzioniTerminale(){
 	USART_TX_string("Scrivi \"down\" per decrementare il Duty Cycle di 1%");
 }
 
-//Le due ISR seguenti hanno il compito di modificare i valori delle variabili assegnate ad ogni switch dei dip switch esterni.
-//Le variabili uPC0..uPC3, daPD1..daPD4, h, sono diciarate come variabili globali, in quanto devono essere modificate dalle ISR.
-
-//returns the size of a character array using a pointer to the first element of the character array
-int dimensioneVettore(char *ptr){
-	
-	size_t dimensione = sizeof(ptr) / sizeof(ptr[0]);
-	return (int)dimensione;
-}
-
 //La seguente funzione permette di convertire un numero binario memorizzato in un array in decimale.
 //Il numero nella posizione 0 dell'array è il Most Significant Bit.
 //Significa quindi che il calcolo parte da quel valore.
@@ -461,7 +456,7 @@ char BinToDec(volatile char cifreBin[], char dimensione){
 	char dec = 0;
 
 	for(int i=0; i<dimensione; i++){
-		dec += (cifreBin[dimensione-1-i] * pow(2, i));
+		dec = dec + (cifreBin[dimensione-1-i] * pow(2, i));
 	}
 	
 	//Questa è il numero corrispondente al numero inserito con il Dip Switch
