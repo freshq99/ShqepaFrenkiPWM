@@ -265,6 +265,8 @@ void init(void){
 	PORTD = ~( (1<<PCINT18)|(1<<PCINT19)|(1<<PCINT20)|(1<<PCINT23) );
 	PORTC = ~( (1<<PCINT8)|(1<<PCINT9)|(1<<PCINT10)|(1<<PCINT11)|(1<<PCINT13) );
 	
+	
+	//Abilito interrupt globali
 	sei();
 	
 }
@@ -276,9 +278,11 @@ void timer_init(void){
 	
 	// Impostazione timer T0 in modalità Fast PWM su OCOA (PD6) con TOP=UserTop e prescaler 256
 	OCR0A = (char) UserTop;
-	OCR0B = ceil(valoreDC*top/100);
-	TCCR0A = ((1<<COM0B1)|(1<<WGM01)|(1<<WGM00)); // equivale a TCCR0A = 0b00100011;
-	TCCR0B = ((1<<WGM02)|(1<<CS02)); // equivale a TCCR0B = 0b00001101;
+	OCR0B = ceil(valoreDC*top/100); //Imposto il primo valore di duty cycle
+	
+	//Con le seguenti linee di codice, si configurano fattore di prescaler, modalità pwm, polarità
+	TCCR0A = ((1<<COM0B1)|(1<<WGM01)|(1<<WGM00));
+	TCCR0B = ((1<<WGM02)|(1<<CS02)); 
 	
 }
 
@@ -291,20 +295,18 @@ void timer_off(void){
 	TCNT1H = 0x00; // reset del counter T1 (parte alta)
 	TCNT1L = 0x00; // reset del counter T1 (parte bassa)
 
-	// azzeramento flag di un eventuale output compare appena occorso (l'azzeramento è ottenuto scrivendo '1' nel flag)
-	TIFR1 = (1<<OCF1A); // equivale a TCCR1B = 0b00000010
-	
 }
 
+//Funzione utilizzata quando riaccendo il timer dopo lo spegnimento del motore.
 void timer_on(void){
 	
 	// Impostazione timer T0 in modalità Fast PWM su OCOA (PD6) con TOP=UserTop e prescaler 256
 	OCR0A = (char) UserTop;
-	valoreDC = 1;
+	valoreDC = 1; //Inserisco manualmente il valore percentuale 1%
 	OCR0B = ceil(valoreDC*top/100);;
-	TCCR0A = ((1<<COM0B1)|(1<<WGM01)|(1<<WGM00)); // equivale a TCCR0A = 0b00100011;
-	TCCR0B = ((1<<WGM02)|(1<<CS02)); // equivale a TCCR0B = 0b00001101;
-	flag_accensione = 0;
+	TCCR0A = ((1<<COM0B1)|(1<<WGM01)|(1<<WGM00)); //Effettuo di nuovo le operazioni di configurazione del timer
+	TCCR0B = ((1<<WGM02)|(1<<CS02)); 
+	flag_accensione = 0; //Faccio il reset del flag che permette di sapere se c'è stato uno spegnimento.
 	
 }
 //Devo inizializzare la periferica USART.
@@ -410,6 +412,7 @@ void LedOff(void){
 	
 }
 
+//Funzione che permette di evitare alcuni bug al primo avvio, prima dell'inizializzazione degli interrupt, nel caso i dip switch non si vogliano cambiare.
 void stato_dip_switch(){
 	
 	units[3] = !((PINC & (1<<PINC0)) == 0);
@@ -427,6 +430,7 @@ void stato_dip_switch(){
 
 }
 
+//Messaggio di benvenuto
 void benvenuto(){
 	
 	USART_TX_string("Comando motore mediante PWM - Frenki Shqepa");
@@ -439,6 +443,7 @@ void benvenuto(){
 	
 }
 
+//Istruzioni per il selettore esterno
 void istruzioniSelettoreEsterno(){
 	
 	USART_TX_string("~~~~~~~Istruzioni per l'utilizzo del Selettore Esterno~~~~~~");
@@ -454,6 +459,7 @@ void istruzioniSelettoreEsterno(){
 	USART_TX_string("Devi usare i Dip Switch con la codifica BCD per ogni cifra");
 }
 
+//Istruzioni per l'inserimento da terminale
 void istruzioniTerminale(){
 	
 	USART_TX_string("\nScrivi \"up\" per aumentare il Duty Cycle di 1%");
