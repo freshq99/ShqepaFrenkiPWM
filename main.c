@@ -566,7 +566,7 @@ ISR(PCINT1_vect){
 	units[1] = !((PINC & (1<<PINC2)) == 0);
 	units[0] = !((PINC & (1<<PINC3)) == 0);
 
-	hundreds[0] = !((PINC & (1<<PINB2)) == 0);
+	hundreds[0] = !((PINB & (1<<PINB2)) == 0);
 	
 }
 
