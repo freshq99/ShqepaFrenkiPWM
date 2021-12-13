@@ -46,11 +46,11 @@ void USART_init(void);
 void USART_RX_string(char *, unsigned const int);
 void USART_TX_string(char *);
 
-//Funzioni per accensione e spegnimento del led nel cambio da una modalità di inserimento all'altra.
+//Funzioni per accensione e spegnimento del led nel cambio da una modalità di inserimento all'altra
 void LedOn(void);
 void LedOff(void);
 
-//Funzioni di utilità che permettono la conversione da bcd a decimale.
+//Funzioni di utilità che permettono la conversione da bcd a decimale
 char BinToDec(volatile char[], char);
 char SwitchConcat(char, char, char);
 char potenza(char, char);
@@ -58,12 +58,12 @@ char potenza(char, char);
 //Funzione di controllo dello stato degli input esterni
 void stato_dip_switch(void);
 
-//Inizializzazione del timer e funzioni di spegnimento e accensione quando si arriva a 0% del duty cycle.
+//Inizializzazione del timer e funzioni di spegnimento e accensione quando si arriva a 0% del duty cycle
 void timer_init(void);
 void timer_off(void);
 void timer_on(void);
 
-//Funzioni per la stampa delle istruzioni delle modalità e di benvenuto.
+//Funzioni per la stampa delle istruzioni delle modalità e di benvenuto
 void istruzioniSelettoreEsterno(void);
 void istruzioniTerminale(void);
 void benvenuto(void);
@@ -71,23 +71,22 @@ void benvenuto(void);
 //----------------------VARIABILI GLOBALI------------------------
 
 volatile unsigned char top = (unsigned char) UserTop;
-volatile unsigned char valoreDC = (unsigned char) DInit; // variabile per memorizzazione percentuale duty cycle.
+volatile unsigned char valoreDC = (unsigned char) DInit; // variabile per memorizzazione percentuale duty cycle
 
 volatile char inserimentoDaTerminale; //Flag di inserimento da terminale. Se '1', il terminale ha precedenza.
 
-volatile char flag_accensione; //Se è a 1, vuol dire che c'è stato lo spegnimento del timer. Utilizzato quando si arriva a 0% del duty cycle.
+volatile char flag_accensione; //Se è a 1, vuol dire che c'è stato lo spegnimento del timer. Utilizzato quando si arriva a 0% del duty cycle
 
 //Le seguenti variabili globali vengono utilizzate per capire quale 'bit'
 //del dip switch delle unità viene modificato.
-//Il Least Significant Bit è posto in posizione 3 per units e tens.
 volatile char units[4];
 volatile char tens[4];
 volatile char hundreds[1];
 
 //Voglio creare una macchina a stati.
-//Definisco allora la variabile di stato e i suoi possibili valori.
+//Definisco allora la variabile di stato e i suoi possibili valori
 volatile enum state {TerminaleAttivo, SelettoreEsternoAttivo, ModificaDCTerminale, ModificaDCSelettore} PresentState = TerminaleAttivo;
-//Si inizia con l'inserimento da terminale.
+//Si inizia con l'inserimento da terminale
 
 
 //----------------------MAIN PROGRAM------------------------
@@ -96,44 +95,44 @@ int main(void){
 	init();
 	USART_init();
 	LedOn();
-	//Iniziamo a far muovere il motore. Al primo avvio il motore si muove con duty cycle al 50%.
+	//Iniziamo a far muovere il motore. Al primo avvio il motore si muove con duty cycle al 50%
 	timer_init();
 	
-	char str[MAX_STR_LEN + 1]; // array per la stringa (una cella in più per ospitare il carattere terminatore di stringa).
+	char str[MAX_STR_LEN + 1]; // array per la stringa (una cella in più per ospitare il carattere terminatore di stringa)
 	
-	//Le seguenti variabili conterranno, in ordine, la cifra delle unità, decine e centinaia, dopo la conversione da bcd a decimale.
+	//Le seguenti variabili conterranno, in ordine, la cifra delle unità, decine e centinaia, dopo la conversiona da bcd a decimale
 	unsigned char u;
 	unsigned char ts;
 	unsigned char hs;
 	
-	//Messaggi di benvenuto.
+	//Messaggi di benvenuto
 	benvenuto();
 	
 	while(1){
 		
 		switch (PresentState){
 			
-			case TerminaleAttivo: //L'inserimento da terminale è attivo.
-			istruzioniTerminale(); //Stampo le istruzioni.
-			USART_RX_string(str, MAX_STR_LEN); //Leggo la istruzione inserita dall'utente.
+			case TerminaleAttivo: //L'inserimento da terminale è attivo
+			istruzioniTerminale();
+			USART_RX_string(str, MAX_STR_LEN); //Leggo la istruzione
 			
-			if(!inserimentoDaTerminale){ //Se è attiva la modalità di inserimento da terminale, procedo con la lettura del comando.
-				//Se il comando inserito è valido, si passa allo stato in cui avviene la modifica del duty cycle.
+			if(!inserimentoDaTerminale){ //Se è attiva la modalità di inserimento da terminale, procedo.
+				//Se il comando inserito è valido, si passa allo stato in cui avviene la modifica del duty cycle
 				if((!strcmp(str, "up")) || (!strcmp(str, "down")))
 				PresentState = ModificaDCTerminale;
 				
-				else //Altrimenti non viene riconosciuto il comando e bisogna inserirne uno valido.
+				else //Altrimenti non viene riconosciuto il comando e bisogna inserirne uno valido
 				USART_TX_string("\n-> Comando non riconosciuto");
 			}
 			
-			else//Essendoci due sole modalità, per esclusione, si entra nella modalità di inserimento tramite selettore esterno.
-			PresentState = SelettoreEsternoAttivo; //Si entra in modalità Selettore Esterno.
+			else
+			PresentState = SelettoreEsternoAttivo; //Si entra in modalità Selettore Esterno
 			
 			break;
 			
 			case SelettoreEsternoAttivo:
 			if(inserimentoDaTerminale){
-				istruzioniSelettoreEsterno();//Stampo le istruzioni del selettore esterno.
+				istruzioniSelettoreEsterno();
 				
 				//Faccio in modo che l'inserimento del duty cycle, ossia il salvataggio nel registro OCR0B del valore,
 				//avvenga solo dopo aver finito la fase di inserimento. Questa è definita dai comandi "inizio" e "fine".
@@ -171,14 +170,14 @@ int main(void){
 				else{
 					valoreDC++;//Se inserendo "up", aumento di 1% il valore percentuale e mappo rispetto a 255 il valore.
 					OCR0B = ceil(valoreDC*top/100);
-					sprintf(str, "\n-> Duty Cycle aumentato a %d %%", valoreDC); //Stampo il valore aggiornato di duty cycle.
+					sprintf(str, "\n-> Duty Cycle aumentato a %d %%", valoreDC); //Stampo il valore aggiornato di duty cycle
 					USART_TX_string(str);
 				}
 			}
 			
 			//Nella seguente condizione faccio a meno di fare un compare con str
 			//perchè in questo stato ci si entra solo nella condizione in cui
-			//str sia o "up" o "down".
+			//str sia o "up" o "down"
 			else{
 				if(valoreDC <= 1){//Spengo il motore
 					timer_off();
@@ -226,7 +225,7 @@ int main(void){
 				else{//Sto modificando il duty cycle in un valore maggiore di zero accettabile
 					if(flag_accensione == 1){//Se cambio il duty cycle dopo che era stato impostato a zero, riaccendo il timer.
 						timer_on();
-						valoreDC = switchConcat(hs, ts, u);
+						valoreDC = SwitchConcat(hs, ts, u);
 						OCR0B = ceil(valoreDC*top/100);
 						sprintf(str, "\n-> Duty Cycle aumentato a %d %%", valoreDC);
 						USART_TX_string(str);
@@ -255,6 +254,8 @@ int main(void){
 
 //----------------------FUNZIONI UTENTE------------------------
 
+
+//Usiamo il led per capire quando avviene una corretta TX/RX
 void init(void){
 	
 	//Devo impostare come uscita il pin 5 del PORTB.
@@ -333,13 +334,13 @@ void timer_on(void){
 //Scelgo per il frame il formato 8N1.
 void USART_init(void){
 	
-	//Imposto per prima cosa il baud rate.
+	//Imposto per prima cosa il baud rate
 	UBRR0 = UBRR_VALUE;
 	
-	//Ora attivo la periferica di TX.
+	//Ora attivo la periferica di TX
 	UCSR0B = (1<<TXEN0);
 	
-	//Imposto la modalità asincrona con 8 bit di dati, nessuna parità, 1 bit di stop.
+	//Imposto la modalità asincrona con 8 bit di dati, nessuna parità, 1 bit di stop
 	UCSR0C = (1<<UCSZ01)|(1<<UCSZ00);
 	
 	//Ci sarebbero anche altri bit da configurare, ma sono '0'.
@@ -553,7 +554,7 @@ ISR(PCINT0_vect){
 		inserimentoDaTerminale = !inserimentoDaTerminale;
 	}
 	
-	hundreds[0] = !((PINB & (1<<PINC5)) == 0);
+	hundreds[0] = !((PINB & (1<<PINB2)) == 0);
 	
 }
 
