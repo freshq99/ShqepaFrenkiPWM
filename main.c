@@ -23,12 +23,11 @@ utilizzo il pulsante sul pin 7 del port B: in questo modo scelgo di abilitare la
 attraverso terminale. Per via software si esclude successivamente, in questo caso, l'inserimento del Duty Cycle
 via selettore esterno.
 *************************************************************************************************************/
-
-#define F_CPU 16000000UL //Frequenza del processore, serve per
+#define F_CPU 16000000UL //Frequenza del processore, serve per il calcolo del Baud Rate (UBBR_VALUE)
 #define BAUD 9600 //Baud Rate selezionato per la trasmissione USART
 #define MAX_STR_LEN 60 //Lunghezza massima in termini di caratteri di ogni stringa ricevuta e trasmessa
 #define UserTop 255 //Utilizzo il timer 0 e voglio sfruttare tutti i possibili valori
-#define DInit 94 //Valore iniziale di Duty Cycle al primo avvio del programma
+#define DInit 50 //Valore iniziale di Duty Cycle al primo avvio del programma
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -301,7 +300,7 @@ void timer_init(void){
 	
 	//Con le seguenti linee di codice, si configurano fattore di prescaler, modalità pwm, polarità
 	TCCR0A = ((1<<COM0B1)|(1<<WGM01)|(1<<WGM00));
-	TCCR0B = ((1<<WGM02)|(1<<CS02));
+	TCCR0B = ((1<<WGM02)|(1<<CS02)|(1<<CS00));
 	
 }
 
@@ -326,7 +325,7 @@ void timer_on(void){
 	valoreDC = 1; //Inserisco manualmente il valore percentuale 1%
 	OCR0B = ceil(valoreDC*top/100);
 	TCCR0A = ((1<<COM0B1)|(1<<WGM01)|(1<<WGM00)); //Effettuo di nuovo le operazioni di configurazione del timer
-	TCCR0B = ((1<<WGM02)|(1<<CS02));
+	TCCR0B = ((1<<WGM02)|(1<<CS02)|(CS00));
 	flag_accensione = 0; //Faccio il reset del flag che permette di sapere se c'è stato uno spegnimento.
 	
 }
