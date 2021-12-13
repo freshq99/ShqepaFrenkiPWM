@@ -293,7 +293,7 @@ void init(void){
 void timer_init(void){
 	
 	// impostazione del pin 5 del portD (OC0B) come uscita (gli altri pin sono ingressi di default)
-	DDRD = (1<<DDD5); 
+	DDRD = (1<<DDD5);
 	
 	// Impostazione timer T0 in modalità Fast PWM su OCOB (PD5) con TOP=UserTop e prescaler 1024
 	OCR0A = (char) UserTop;
