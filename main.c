@@ -263,12 +263,12 @@ void init(void){
 	
 	//Non inserisco la configurazione dei DDRC e DDRD perchè andrebbero configurati a '0'.
 	
-	//Devo fare il clear del bit 5 del portB, quindi usctia a zero.
 	PORTB &= ~(1<<PORTB5);
+	PORTD &= ~( (1<<PORTD2)|(1<<PORTD3)|(1<<PORTD4)|(1<<PORTD7) );
+	PORTC &= ~( (1<<PORTC0)|(1<<PORTC1)|(1<<PORTC2)|(1<<PORTC3) );
 	
 	//Abilito gli interrupt Pin Change 0, 1 e 2
 	PCICR = (1<<PCIE0)|(1<<PCIE1)|(1<<PCIE2);
-	
 	
 	//Rimuovo le maschere agli interrupt sui pin
 	//PCINT8, PCINT9, PCINT10, PCINT11,PCINT13
@@ -278,10 +278,10 @@ void init(void){
 	PCMSK1 = (1<<PCINT8)|(1<<PCINT9)|(1<<PCINT10)|(1<<PCINT11);
 	PCMSK2 = (1<<PCINT18)|(1<<PCINT19)|(1<<PCINT20)|(1<<PCINT23);
 	
-	//PORTCD E PORTC
-	PORTB = ~( (1<<PORTB2) ); 
-	PORTD = ~( (1<<PCINT18)|(1<<PCINT19)|(1<<PCINT20)|(1<<PCINT23) );
-	PORTC = ~( (1<<PCINT8)|(1<<PCINT9)|(1<<PCINT10)|(1<<PCINT11)|(1<<PCINT13) );
+	//PORTD E PORTC
+	PORTB = ~( (1<<PORTB2) );
+	PORTD = ~( (1<<PORTD2)|(1<<PORTD3)|(1<<PORTD4)|(1<<PORTD7) );
+	PORTC = ~( (1<<PORTC0)|(1<<PORTC1)|(1<<PORTC2)|(1<<PORTC3) );
 	
 	
 	//Abilito interrupt globali
@@ -289,20 +289,6 @@ void init(void){
 	
 }
 
-void timer_init(void){
-	
-	// impostazione del pin 5 del portD (OC0B) come uscita (gli altri pin sono ingressi di default)
-	DDRD = (1<<DDD5); // equivale a DDRD = 0b00100000;
-	
-	// Impostazione timer T0 in modalità Fast PWM su OCOA (PD6) con TOP=UserTop e prescaler 256
-	OCR0A = (char) UserTop;
-	OCR0B = ceil(valoreDC*top/100); //Imposto il primo valore di duty cycle
-	
-	//Con le seguenti linee di codice, si configurano fattore di prescaler, modalità pwm, polarità
-	TCCR0A = ((1<<COM0B1)|(1<<WGM01)|(1<<WGM00));
-	TCCR0B = ((1<<WGM02)|(1<<CS02)); 
-	
-}
 
 void timer_off(void){
 	
