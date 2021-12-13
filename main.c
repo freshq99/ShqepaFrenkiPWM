@@ -24,11 +24,11 @@ attraverso terminale. Per via software si esclude successivamente, in questo cas
 via selettore esterno.
 *************************************************************************************************************/
 
-#define F_CPU 16000000UL //Frequenza del processore, serve per 
+#define F_CPU 16000000UL //Frequenza del processore, serve per
 #define BAUD 9600 //Baud Rate selezionato per la trasmissione USART
 #define MAX_STR_LEN 60 //Lunghezza massima in termini di caratteri di ogni stringa ricevuta e trasmessa
 #define UserTop 255 //Utilizzo il timer 0 e voglio sfruttare tutti i possibili valori
-#define DInit 4 //Valore iniziale di Duty Cycle al primo avvio del programma
+#define DInit 94 //Valore iniziale di Duty Cycle al primo avvio del programma
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -40,7 +40,7 @@ via selettore esterno.
 
 //----------------------PROTOTIPI FUNZIONI------------------------
 //Inizializzazione dei pin, interrupt, led
-void init(void); 
+void init(void);
 
 //Inizializzazione periferica USART, trasmissione e ricezione
 void USART_init(void);
@@ -114,139 +114,140 @@ int main(void){
 		switch (PresentState){
 			
 			case TerminaleAttivo: //L'inserimento da terminale è attivo
-				istruzioniTerminale();
-				USART_RX_string(str, MAX_STR_LEN); //Leggo la istruzione
+			istruzioniTerminale();
+			USART_RX_string(str, MAX_STR_LEN); //Leggo la istruzione
 			
-				if(!inserimentoDaTerminale){ //Se è attiva la modalità di inserimento da terminale, procedo.
-					//Se il comando inserito è valido, si passa allo stato in cui avviene la modifica del duty cycle
-					if((!strcmp(str, "up")) || (!strcmp(str, "down")))
-						PresentState = ModificaDCTerminale;
+			if(!inserimentoDaTerminale){ //Se è attiva la modalità di inserimento da terminale, procedo.
+				//Se il comando inserito è valido, si passa allo stato in cui avviene la modifica del duty cycle
+				if((!strcmp(str, "up")) || (!strcmp(str, "down")))
+				PresentState = ModificaDCTerminale;
 				
-					else //Altrimenti non viene riconosciuto il comando e bisogna inserirne uno valido
-						USART_TX_string("\n-> Comando non riconosciuto");
-				}
+				else //Altrimenti non viene riconosciuto il comando e bisogna inserirne uno valido
+				USART_TX_string("\n-> Comando non riconosciuto");
+			}
 			
-				else
-					PresentState = SelettoreEsternoAttivo; //Si entra in modalità Selettore Esterno
+			else
+			PresentState = SelettoreEsternoAttivo; //Si entra in modalità Selettore Esterno
 			
-				break;
+			break;
 			
 			case SelettoreEsternoAttivo:
-				if(inserimentoDaTerminale){
-					istruzioniSelettoreEsterno();
-					
-					//Faccio in modo che l'inserimento del duty cycle, ossia il salvataggio nel registro OCR0B del valore,
-					//avvenga solo dopo aver finito la fase di inserimento. Questa è definita dai comandi "inizio" e "fine".
-					//In questo modo evito che il motore abbia un duty cycle non desiderato mentre si cambia valore attraverso
-					//il selettore esterno.
-					USART_RX_string(str, MAX_STR_LEN);
-					
-					if(!strcmp(str, "inizio"))
-						PresentState = ModificaDCSelettore;
-					
-					else {
-						USART_TX_string("Devi scrivere \"inizio\" per iniziare la modifica del DC");
-						PresentState = SelettoreEsternoAttivo;
-					}
+			if(inserimentoDaTerminale){
+				istruzioniSelettoreEsterno();
+				
+				//Faccio in modo che l'inserimento del duty cycle, ossia il salvataggio nel registro OCR0B del valore,
+				//avvenga solo dopo aver finito la fase di inserimento. Questa è definita dai comandi "inizio" e "fine".
+				//In questo modo evito che il motore abbia un duty cycle non desiderato mentre si cambia valore attraverso
+				//il selettore esterno.
+				USART_RX_string(str, MAX_STR_LEN);
+				
+				if(!strcmp(str, "inizio"))
+				PresentState = ModificaDCSelettore;
+				
+				else {
+					USART_TX_string("Devi scrivere \"inizio\" per iniziare la modifica del DC");
+					PresentState = SelettoreEsternoAttivo;
 				}
-				
-				else
-					PresentState = TerminaleAttivo;
-				
-				break;
+			}
+			
+			else
+			PresentState = TerminaleAttivo;
+			
+			break;
 			
 			case ModificaDCTerminale:
-				if(!strcmp(str, "up")){
+			if(!strcmp(str, "up")){
 				
-					if(flag_accensione == 1){//Se si inserisce il comando "up" quando il motore è spento, ho un ciclo particolare, in cui devo riaccendere il timer.
+				if(flag_accensione == 1){//Se si inserisce il comando "up" quando il motore è spento, ho un ciclo particolare, in cui devo riaccendere il timer.
+					timer_on();
+					OCR0B = ceil(valoreDC*top/100);
+					sprintf(str, "\n-> Duty Cycle aumentato a %d %%", valoreDC);
+					USART_TX_string(str);
+				}
+				
+				else if((valoreDC+1) > 100)//Se inserendo "up", supereri 100% di duty cycle, stampo un messaggio di avviso.
+				USART_TX_string("\n-> Duty Cycle massimo raggiunto");
+				
+				else{
+					valoreDC++;//Se inserendo "up", aumento di 1% il valore percentuale e mappo rispetto a 255 il valore.
+					OCR0B = ceil(valoreDC*top/100);
+					sprintf(str, "\n-> Duty Cycle aumentato a %d %%", valoreDC); //Stampo il valore aggiornato di duty cycle
+					USART_TX_string(str);
+				}
+			}
+			
+			//Nella seguente condizione faccio a meno di fare un compare con str
+			//perchè in questo stato ci si entra solo nella condizione in cui
+			//str sia o "up" o "down"
+			else{
+				if(valoreDC <= 1){//Spengo il motore
+					timer_off();
+					flag_accensione = 1;
+					USART_TX_string("\n-> Motore Spento !");
+				}
+				
+				else{
+					valoreDC--;//Procedimento analogo di "up" ma, ovviamente, si diminuisce il duty cycle.
+					OCR0B = ceil(valoreDC*top/100);
+					sprintf(str, "\n-> Duty Cycle decrementato a %d %%", valoreDC);
+					USART_TX_string(str);
+				}
+			}
+			PresentState = TerminaleAttivo;
+			
+			break;
+			
+			case ModificaDCSelettore:
+			USART_TX_string("\nScrivi \"fine\" quando hai finito la modifica del DC");
+			
+			USART_RX_string(str, MAX_STR_LEN);
+			
+			//Utilizzo la funzione BinToDec per convertire in cifra decimale
+			if(!strcmp(str, "fine")){
+				stato_dip_switch();
+				u = BinToDec(units, 4);
+				ts = BinToDec(tens, 4);
+				hs = BinToDec(hundreds, 1);
+				
+				valoreDC = SwitchConcat(hs, ts, u);//Concateno le tre cifre per formare il numero decimale che costituisce il duty cycle percentuale nuovo.
+				
+				//La codifica bcd non permette che la cifra superi il 9.
+				//Il duty cycle non può superare il 100%, ma con il selettore esterno posso comunque inserire un tale valore.
+				//Via software impedisco queste condizioni, avvisando l'utente con un messaggio.
+				if(valoreDC > 100 || ts > 9 || u > 9)
+				USART_TX_string("\n-> Numero inserito non ammesso.");
+				
+				else if(valoreDC == 0){
+					timer_off();
+					flag_accensione = 1;
+					USART_TX_string("-> Motore spento!");
+				}
+				
+				else{//Sto modificando il duty cycle in un valore maggiore di zero accettabile
+					if(flag_accensione == 1){//Se cambio il duty cycle dopo che era stato impostato a zero, riaccendo il timer.
 						timer_on();
+						valoreDC = ceil(valoreDC*top/100);
+						OCR0B = ceil(valoreDC*top/100);
 						sprintf(str, "\n-> Duty Cycle aumentato a %d %%", valoreDC);
 						USART_TX_string(str);
 					}
-				
-					else if((valoreDC+1) > 100)//Se inserendo "up", supereri 100% di duty cycle, stampo un messaggio di avviso.
-						USART_TX_string("\n-> Duty Cycle massimo raggiunto");
-				
+					
 					else{
-						valoreDC++;//Se inserendo "up", aumento di 1% il valore percentuale e mappo rispetto a 255 il valore.
-						OCR0B = ceil(valoreDC*top/100);
-						sprintf(str, "\n-> Duty Cycle aumentato a %d %%", valoreDC); //Stampo il valore aggiornato di duty cycle
+						OCR0B = ceil(valoreDC*top/100);//Mappo il valore con la funzione "ceil" in un valore tra 0 e 255, salvandolo poi in OCR0B.
+						sprintf(str, "\n-> Duty Cycle impostato a %d %%", valoreDC);
 						USART_TX_string(str);
 					}
 				}
+				
+				PresentState = SelettoreEsternoAttivo;
+			}
 			
-				//Nella seguente condizione faccio a meno di fare un compare con str
-				//perchè in questo stato ci si entra solo nella condizione in cui
-				//str sia o "up" o "down"
-				else{
-					if(valoreDC <= 1){//Spengo il motore
-						timer_off();
-						flag_accensione = 1;
-						USART_TX_string("\n-> Motore Spento !");
-					}
-				
-					else{
-						valoreDC--;//Procedimento analogo di "up" ma, ovviamente, si diminuisce il duty cycle.
-						OCR0B = ceil(valoreDC*top/100);
-						sprintf(str, "\n-> Duty Cycle decrementato a %d %%", valoreDC);
-						USART_TX_string(str);
-					}
-				}
-				PresentState = TerminaleAttivo;
+			else{
+				USART_TX_string("Il Duty Cycle non è stato modificato con successo");
+				PresentState = SelettoreEsternoAttivo;
+			}
 			
-				break;
-			
-			case ModificaDCSelettore:
-				USART_TX_string("\nScrivi \"fine\" quando hai finito la modifica del DC");
-				
-				USART_RX_string(str, MAX_STR_LEN);
-				
-				//Utilizzo la funzione BinToDec per convertire in cifra decimale
-				if(!strcmp(str, "fine")){
-					stato_dip_switch();
-					u = BinToDec(units, 4);
-					ts = BinToDec(tens, 4);
-					hs = BinToDec(hundreds, 1);
-					
-					valoreDC = SwitchConcat(hs, ts, u);//Concateno le tre cifre per formare il numero decimale che costituisce il duty cycle percentuale nuovo.
-					
-					//La codifica bcd non permette che la cifra superi il 9.
-					//Il duty cycle non può superare il 100%, ma con il selettore esterno posso comunque inserire un tale valore.
-					//Via software impedisco queste condizioni, avvisando l'utente con un messaggio.
-					if(valoreDC > 100 || ts > 9 || u > 9)
-						USART_TX_string("\n-> Numero inserito non ammesso.");
-					
-					else if(valoreDC == 0){
-						timer_off();
-						flag_accensione = 1;
-						USART_TX_string("-> Motore spento!");
-					}
-					
-					else{//Sto modificando il duty cycle in un valore maggiore di zero accettabile
-						if(flag_accensione == 1){//Se cambio il duty cycle dopo che era stato impostato a zero, riaccendo il timer.
-							timer_on();
-							valoreDC = SwitchConcat(hs, ts, u);//Concateno le tre cifre per formare il numero decimale che costituisce il duty cycle percentuale nuovo.
-							OCR0B = ceil(valoreDC*top/100);//Mappo il valore con la funzione "ceil" in un valore tra 0 e 255, salvandolo poi in OCR0B.
-							sprintf(str, "\n-> Duty Cycle impostato a %d %%", valoreDC);
-							USART_TX_string(str);
-						}
-						
-						else{	
-							OCR0B = ceil(valoreDC*top/100);//Mappo il valore con la funzione "ceil" in un valore tra 0 e 255, salvandolo poi in OCR0B.
-							sprintf(str, "\n-> Duty Cycle impostato a %d %%", valoreDC);
-							USART_TX_string(str);
-						}	
-					}
-					
-					PresentState = SelettoreEsternoAttivo;
-				}
-				
-				else{
-					USART_TX_string("Il Duty Cycle non è stato modificato con successo");
-					PresentState = SelettoreEsternoAttivo;
-				}
-				
-				break;
+			break;
 			
 		}
 	}
@@ -289,6 +290,20 @@ void init(void){
 	
 }
 
+void timer_init(void){
+	
+	// impostazione del pin 5 del portD (OC0B) come uscita (gli altri pin sono ingressi di default)
+	DDRD = (1<<DDD5); // equivale a DDRD = 0b00100000;
+	
+	// Impostazione timer T0 in modalità Fast PWM su OCOA (PD6) con TOP=UserTop e prescaler 256
+	OCR0A = (char) UserTop;
+	OCR0B = ceil(valoreDC*top/100); //Imposto il primo valore di duty cycle
+	
+	//Con le seguenti linee di codice, si configurano fattore di prescaler, modalità pwm, polarità
+	TCCR0A = ((1<<COM0B1)|(1<<WGM01)|(1<<WGM00));
+	TCCR0B = ((1<<WGM02)|(1<<CS02));
+	
+}
 
 void timer_off(void){
 	
@@ -308,10 +323,10 @@ void timer_on(void){
 	
 	// Impostazione timer T0 in modalità Fast PWM su OCOA (PD6) con TOP=UserTop e prescaler 256
 	OCR0A = (char) UserTop;
-	//valoreDC = 1; //Inserisco manualmente il valore percentuale 1%
-	OCR0B = ceil(1*top/100);;
+	valoreDC = 1; //Inserisco manualmente il valore percentuale 1%
+	OCR0B = ceil(valoreDC*top/100);
 	TCCR0A = ((1<<COM0B1)|(1<<WGM01)|(1<<WGM00)); //Effettuo di nuovo le operazioni di configurazione del timer
-	TCCR0B = ((1<<WGM02)|(1<<CS02)); 
+	TCCR0B = ((1<<WGM02)|(1<<CS02));
 	flag_accensione = 0; //Faccio il reset del flag che permette di sapere se c'è stato uno spegnimento.
 	
 }
@@ -513,9 +528,9 @@ char potenza(char base, char esponente){
 	char pot = 1;
 	
 	for (int i = 0; i < esponente; i++)
-		pot = pot * base;
-		
-		return pot; 
+	pot = pot * base;
+	
+	return pot;
 	
 }
 
